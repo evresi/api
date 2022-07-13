@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/evresi/api/server/data"
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4"
 )
@@ -16,7 +16,7 @@ func (s *Server) routePOI(r chi.Router) {
 	r.Get("/{poiID}", func(w http.ResponseWriter, r *http.Request) {
 		idParam := chi.URLParam(r, "poiID")
 
-		if id, err := uuid.Parse(idParam); err == nil {
+		if id := data.ParseUUID(idParam); id != (data.UUID{}) {
 			row := s.db.QueryRow(context.Background(), "SELECT id, name, thumbnail, description FROM poi WHERE id = $1", id.String())
 
 			poi, err := parsePOIFromRow(row)
@@ -40,34 +40,24 @@ func (s *Server) routePOI(r chi.Router) {
 	})
 }
 
-func parsePOIFromRow(row pgx.Row) (POI, error) {
+func parsePOIFromRow(row pgx.Row) (data.POI, error) {
 	var idPg pgtype.UUID
 	var name string
 	var thumbnailPg pgtype.UUID
 	var description string
 	if err := row.Scan(&idPg, &name, &thumbnailPg, &description); err != nil {
-		return POI{}, err
+		return data.POI{}, err
 	}
 
-	var thumbnail *uuid.UUID
-	if thumbnailPg.Status == pgtype.Present {
-		tn, err := uuid.FromBytes(thumbnailPg.Bytes[:])
-		if err == nil {
-			thumbnail = &tn
-		} else {
-			return POI{}, err
-		}
+	thumbnail := data.UUID{
+		Valid: thumbnailPg.Status == pgtype.Present,
+		Bytes: thumbnailPg.Bytes,
 	}
 
-	var id *uuid.UUID
-	if idPg.Status == pgtype.Present {
-		i, err := uuid.FromBytes(idPg.Bytes[:])
-		if err == nil {
-			id = &i
-		} else {
-			return POI{}, err
-		}
+	id := data.UUID{
+		Valid: idPg.Status == pgtype.Present,
+		Bytes: idPg.Bytes,
 	}
 
-	return POI{ID: id, Name: name, Thumbnail: thumbnail, Description: description}, nil
+	return data.POI{ID: id, Name: name, Thumbnail: thumbnail, Description: description}, nil
 }

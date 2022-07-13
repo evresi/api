@@ -1,12 +1,10 @@
-package server
-
-import "github.com/google/uuid"
+package data
 
 type POI struct {
-	ID          *uuid.UUID
+	ID          UUID
 	Name        string
 	Description string
-	Thumbnail   *uuid.UUID
+	Thumbnail   UUID
 }
 
 type Route []RoutePoint
@@ -18,10 +16,10 @@ type RoutePoint struct {
 		Y float64
 	}
 	Show struct {
-		POI         *uuid.UUID
+		POI         UUID
 		Instruction InstructionDirection
 	}
-	Play uuid.UUID
+	Play UUID
 }
 
 type InstructionDirection string
